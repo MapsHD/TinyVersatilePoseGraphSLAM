@@ -1,0 +1,6 @@
+[submodule "3rdparty/eigen"]
+	path = 3rdparty/eigen
+	url = https://gitlab.com/libeigen/eigen.git
+[submodule "3rdparty/freeglut"]
+	path = 3rdparty/freeglut
+	url = https://github.com/freeglut/freeglut.git
