@@ -1,7 +1,7 @@
 #include <TinyVersatilePoseGraphSLAM.h>
 #include <math.h>
 
-std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
+std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
 {
     std::vector<TaitBryanPose> tb_poses;
     for (const auto &m : m_poses)
@@ -41,12 +41,12 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
                                                                  tb_poses[e.index_to].om,
                                                                  tb_poses[e.index_to].fi,
                                                                  tb_poses[e.index_to].ka,
-                                                                 wx,
-                                                                 wy,
-                                                                 wz,
-                                                                 wom,
-                                                                 wfi,
-                                                                 wka);
+                                                                 wx * e.robust_kernel_W.px_robust_kernel_W,
+                                                                 wy * e.robust_kernel_W.py_robust_kernel_W,
+                                                                 wz * e.robust_kernel_W.pz_robust_kernel_W,
+                                                                 wom * e.robust_kernel_W.om_robust_kernel_W,
+                                                                 wfi * e.robust_kernel_W.fi_robust_kernel_W,
+                                                                 wka * e.robust_kernel_W.ka_robust_kernel_W);
         Eigen::Matrix<double, 12, 1> AtPB;
         relative_pose_obs_eq_tait_bryan_wc_case1_AtPB_simplified(AtPB,
                                                                  tb_poses[e.index_from].px,
@@ -67,12 +67,12 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
                                                                  tb_measurement.om,
                                                                  tb_measurement.fi,
                                                                  tb_measurement.ka,
-                                                                 wx,
-                                                                 wy,
-                                                                 wz,
-                                                                 wom,
-                                                                 wfi,
-                                                                 wka);
+                                                                 wx * e.robust_kernel_W.px_robust_kernel_W,
+                                                                 wy * e.robust_kernel_W.py_robust_kernel_W,
+                                                                 wz * e.robust_kernel_W.pz_robust_kernel_W,
+                                                                 wom * e.robust_kernel_W.om_robust_kernel_W,
+                                                                 wfi * e.robust_kernel_W.fi_robust_kernel_W,
+                                                                 wka * e.robust_kernel_W.ka_robust_kernel_W);
         int ic_1 = e.index_from * 6;
         int ic_2 = e.index_to * 6;
 
@@ -98,6 +98,59 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
     AtPA_AtPB.second = AtPB_out;
 
     return AtPA_AtPB;
+}
+
+double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
+{
+    double result = 0.0;
+    std::vector<double> h_x;
+
+    double sum_sq = 0.0;
+    
+    for (int k = 0; k < x.outerSize(); ++k)
+    {
+        for (Eigen::SparseMatrix<double>::InnerIterator it(x, k); it; ++it)
+        {
+            h_x.push_back(it.value());
+        }
+    }
+    
+    if (h_x.size() == 6 * m_poses.size())
+    {
+        int counter = 0;
+
+        for (size_t i = 0; i < m_poses.size(); i++)
+        {
+            TinyVersatilePoseGraphSLAM::TaitBryanPose pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[i]);
+            double px_update = h_x[counter++];
+            double py_update = h_x[counter++];
+            double pz_update = h_x[counter++];
+            double om_update = h_x[counter++];
+            double fi_update = h_x[counter++];
+            double ka_update = h_x[counter++];
+
+            pose.px += px_update;
+            pose.py += py_update;
+            pose.pz += pz_update;
+            pose.om += om_update;
+            pose.fi += fi_update;
+            pose.ka += ka_update;
+            m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(pose);
+
+            sum_sq += px_update * px_update;
+            sum_sq += py_update * py_update;
+            sum_sq += pz_update * pz_update;
+            sum_sq += om_update * om_update;
+            sum_sq += fi_update * fi_update;
+            sum_sq += ka_update * ka_update;
+        }
+    }
+    else
+    {
+        return -1.0;
+    }
+
+    return sqrt(sum_sq);
 }
 
 TinyVersatilePoseGraphSLAM::TaitBryanPose TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(Eigen::Affine3d m)
@@ -144,30 +197,30 @@ TinyVersatilePoseGraphSLAM::TaitBryanPose TinyVersatilePoseGraphSLAM::pose_tait_
 
 Eigen::Affine3d TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(TaitBryanPose pose)
 {
-	Eigen::Affine3d m = Eigen::Affine3d::Identity();
+    Eigen::Affine3d m = Eigen::Affine3d::Identity();
 
-	double sx = sin(pose.om);
-	double cx = cos(pose.om);
-	double sy = sin(pose.fi);
-	double cy = cos(pose.fi);
-	double sz = sin(pose.ka);
-	double cz = cos(pose.ka);
+    double sx = sin(pose.om);
+    double cx = cos(pose.om);
+    double sy = sin(pose.fi);
+    double cy = cos(pose.fi);
+    double sz = sin(pose.ka);
+    double cz = cos(pose.ka);
 
-	m(0,0) = cy * cz;
-	m(1,0) = cz * sx * sy + cx * sz;
-	m(2,0) = -cx * cz * sy + sx * sz;
+    m(0, 0) = cy * cz;
+    m(1, 0) = cz * sx * sy + cx * sz;
+    m(2, 0) = -cx * cz * sy + sx * sz;
 
-	m(0,1) = -cy * sz;
-	m(1,1) = cx * cz - sx * sy * sz;
-	m(2,1) = cz * sx + cx * sy * sz;
+    m(0, 1) = -cy * sz;
+    m(1, 1) = cx * cz - sx * sy * sz;
+    m(2, 1) = cz * sx + cx * sy * sz;
 
-	m(0,2) = sy;
-	m(1,2) = -cy * sx;
-	m(2,2) = cx * cy;
+    m(0, 2) = sy;
+    m(1, 2) = -cy * sx;
+    m(2, 2) = cx * cy;
 
-	m(0,3) = pose.px;
-	m(1,3) = pose.py;
-	m(2,3) = pose.pz;
+    m(0, 3) = pose.px;
+    m(1, 3) = pose.py;
+    m(2, 3) = pose.pz;
 
-	return m;
+    return m;
 }

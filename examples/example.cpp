@@ -214,8 +214,8 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
         }
         case 't':
         {
-            std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB(m_poses, tb_edges);
-    
+            std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan(m_poses, tb_edges);
+
             for (int row = 0; row < 6; row++)
             {
                 AtPA_AtPB.first.coeffRef(row, row) += 1;
@@ -227,44 +227,9 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
             std::cout << "x = solver.solve(AtPB)" << std::endl;
             Eigen::SparseMatrix<double> x = solver.solve(AtPA_AtPB.second);
 
-            std::vector<double> h_x;
+            double update = TinyVersatilePoseGraphSLAM::apply_result_tait_bryan(x, m_poses);
 
-            for (int k = 0; k < x.outerSize(); ++k)
-            {
-                for (Eigen::SparseMatrix<double>::InnerIterator it(x, k); it; ++it)
-                {
-                    h_x.push_back(it.value());
-                }
-            }
-            std::cout << "h_x.size(): " << h_x.size() << std::endl;
-            std::cout << "AtPA=AtPB SOLVED" << std::endl;
-
-            for (size_t i = 0; i < h_x.size(); i++)
-            {
-                std::cout << h_x[i] << std::endl;
-            }
-
-            if (h_x.size() == 6 * m_poses.size())
-            {
-                int counter = 0;
-
-                for (size_t i = 0; i < m_poses.size(); i++)
-                {
-                    TinyVersatilePoseGraphSLAM::TaitBryanPose pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[i]);
-                    pose.px += h_x[counter++];
-                    pose.py += h_x[counter++];
-                    pose.pz += h_x[counter++];
-                    pose.om += h_x[counter++];
-                    pose.fi += h_x[counter++];
-                    pose.ka += h_x[counter++];
-                    m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(pose);
-                }
-                std::cout << "optimizing with tait bryan finished" << std::endl;
-            }
-            else
-            {
-                std::cout << "optimizing with tait bryan FAILED" << std::endl;
-            }
+            std::cout << "update: " << update << std::endl;
 
             break;
         }
