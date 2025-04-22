@@ -214,7 +214,7 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
         }
         case 't':
         {
-            std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan(m_poses, tb_edges);
+            std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan_wc(m_poses, tb_edges);
 
             for (int row = 0; row < 6; row++)
             {
@@ -227,7 +227,7 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
             std::cout << "x = solver.solve(AtPB)" << std::endl;
             Eigen::SparseMatrix<double> x = solver.solve(AtPA_AtPB.second);
 
-            double update = TinyVersatilePoseGraphSLAM::apply_result_tait_bryan(x, m_poses);
+            double update = TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(x, m_poses);
 
             std::cout << "update: " << update << std::endl;
 

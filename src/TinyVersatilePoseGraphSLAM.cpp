@@ -1,7 +1,7 @@
 #include <TinyVersatilePoseGraphSLAM.h>
 #include <math.h>
 
-std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
+std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
 {
     std::vector<TaitBryanPose> tb_poses;
     for (const auto &m : m_poses)
@@ -100,7 +100,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
     return AtPA_AtPB;
 }
 
-double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
+double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
 {
     double result = 0.0;
     std::vector<double> h_x;
