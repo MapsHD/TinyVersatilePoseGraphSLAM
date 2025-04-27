@@ -36,6 +36,8 @@ inline double random(double low, double high)
 std::vector<Eigen::Affine3d> m_poses;
 std::vector<TinyVersatilePoseGraphSLAM::EdgeTaitBryan> tb_edges;
 std::vector<TinyVersatilePoseGraphSLAM::EdgeRodrigues> rodrigues_edges;
+std::vector<TinyVersatilePoseGraphSLAM::EdgeQuaternion> quaternion_edges;
+
 
 int main(int argc, char *argv[]){
     for (size_t i = 0; i < 100; i++)
@@ -64,7 +66,7 @@ int main(int argc, char *argv[]){
 		Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
 		m_poses.push_back(m);
 	}
-
+   
     for (size_t i = 1; i < 100; i++)
 	{
         TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
@@ -95,9 +97,9 @@ int main(int argc, char *argv[]){
         r_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; //1mm
         r_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; //1mm
         r_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; //1mm
-        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0; // 1degree
-        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0; // 1degree
-        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0; 
+        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0; 
+        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0; 
 
         r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
         r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -107,7 +109,30 @@ int main(int argc, char *argv[]){
         r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
 
         rodrigues_edges.emplace_back(r_edge);
-	}
+
+        TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+        q_edge.index_from = i - 1;
+        q_edge.index_to = i;
+        q_edge.measurement = m_poses[q_edge.index_from].inverse() * m_poses[q_edge.index_to];
+        q_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.q0_1_sigma = 1.0;     
+        q_edge.uncertainty_covariance_information_matrix_inverse.q1_1_sigma = 1.0;     
+        q_edge.uncertainty_covariance_information_matrix_inverse.q2_1_sigma = 1.0;
+        q_edge.uncertainty_covariance_information_matrix_inverse.q3_1_sigma = 1.0;
+
+        q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+        quaternion_edges.emplace_back(q_edge);
+    }
 
 	for (size_t i = 101; i < 200; i++)
 	{
@@ -151,7 +176,30 @@ int main(int argc, char *argv[]){
         r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
 
         rodrigues_edges.emplace_back(r_edge);
-	}
+
+        TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+        q_edge.index_from = i - 1;
+        q_edge.index_to = i;
+        q_edge.measurement = m_poses[q_edge.index_from].inverse() * m_poses[q_edge.index_to];
+        q_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.q0_1_sigma = 1.0;     
+        q_edge.uncertainty_covariance_information_matrix_inverse.q1_1_sigma = 1.0;    
+        q_edge.uncertainty_covariance_information_matrix_inverse.q2_1_sigma = 1.0;
+        q_edge.uncertainty_covariance_information_matrix_inverse.q3_1_sigma = 1.0; 
+
+        q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+        quaternion_edges.emplace_back(q_edge);
+    }
 
 	for (size_t i = 0; i < 100; i += 10)
 	{
@@ -183,9 +231,9 @@ int main(int argc, char *argv[]){
         r_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; //1mm
         r_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; //1mm
         r_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; //1mm
-        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0; // 1degree
-        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0; // 1degree
-        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0;
+        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0;
+        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0;
 
         r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
         r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -195,7 +243,30 @@ int main(int argc, char *argv[]){
         r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
 
         rodrigues_edges.emplace_back(r_edge);
-	}
+
+        TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+        q_edge.index_from = i;
+        q_edge.index_to = i + 100;
+        q_edge.measurement = m_poses[q_edge.index_from].inverse() * m_poses[q_edge.index_to];
+        q_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; // 1mm
+        q_edge.uncertainty_covariance_information_matrix_inverse.q0_1_sigma = 1.0;     
+        q_edge.uncertainty_covariance_information_matrix_inverse.q1_1_sigma = 1.0;     
+        q_edge.uncertainty_covariance_information_matrix_inverse.q2_1_sigma = 1.0;
+        q_edge.uncertainty_covariance_information_matrix_inverse.q3_1_sigma = 1.0;
+
+        q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+        q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+        quaternion_edges.emplace_back(q_edge);
+    }
 
     if (false == initGL(&argc, argv))
     {
@@ -333,7 +404,28 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
             std::cout << "x = solver.solve(AtPB)" << std::endl;
             Eigen::SparseMatrix<double> x = solver.solve(AtPA_AtPB.second);
 
-            double update = TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(x, m_poses);
+            double update = TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(x, m_poses);
+
+            std::cout << "update: " << update << std::endl;
+
+            break;
+        }
+        case 'q':
+        {
+            std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_quaternion_wc(m_poses, quaternion_edges);
+
+            for (int row = 0; row < 7; row++)
+            {
+                AtPA_AtPB.first.coeffRef(row, row) += 1;
+            }
+
+            std::cout << "start solving AtPA=AtPB" << std::endl;
+            Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver(AtPA_AtPB.first);
+
+            std::cout << "x = solver.solve(AtPB)" << std::endl;
+            Eigen::SparseMatrix<double> x = solver.solve(AtPA_AtPB.second);
+
+            double update = TinyVersatilePoseGraphSLAM::apply_result_quaternion_wc(x, m_poses);
 
             std::cout << "update: " << update << std::endl;
 
@@ -401,6 +493,7 @@ void printHelp()
     std::cout << "n: add noise to poses" << std::endl;
     std::cout << "t: optimize single iteration Gauss-Newton (rotation agle reprezentation Tait-Bryan)" << std::endl;
     std::cout << "r: optimize single iteration Gauss-Newton (rotation agle reprezentation Rodrigues)" << std::endl;
+    std::cout << "q: optimize single iteration Gauss-Newton (rotation agle reprezentation Quaternion)" << std::endl;
 }
 
 // git submodule add https://gitlab.com/libeigen/eigen.git eigen

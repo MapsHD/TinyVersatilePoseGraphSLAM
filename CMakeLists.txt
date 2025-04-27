@@ -57,7 +57,9 @@ add_executable(
         example examples/example.cpp 
         src/TinyVersatilePoseGraphSLAM.cpp 
         src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_TaitBryan.cpp
-        src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_Rodrigues.cpp)
+        src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_Rodrigues.cpp
+	src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_Quaternion.cpp
+)
 target_link_libraries(
   example
   PRIVATE

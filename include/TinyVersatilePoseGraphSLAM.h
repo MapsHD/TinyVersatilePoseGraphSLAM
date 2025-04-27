@@ -47,7 +47,7 @@ class TinyVersatilePoseGraphSLAM{
         TinyVersatilePoseGraphSLAM(){;};
         ~TinyVersatilePoseGraphSLAM() { ; };
 
-        static std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> get_AtPA_AtPB_pose_graph_tait_byan_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges);
+        static std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> get_AtPA_AtPB_pose_graph_tait_byan_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &edges);
         static double apply_result_tait_bryan_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses);
 
         static void relative_pose_obs_eq_tait_bryan_wc_case1_AtPA_simplified(Eigen::Matrix<double, 12, 12> &AtPA, const double &tx_1, const double &ty_1, const double &tz_1, const double &om_1, const double &fi_1, const double &ka_1, const double &tx_2, const double &ty_2, const double &tz_2, const double &om_2, const double &fi_2, const double &ka_2, const double &p_x, const double &p_y, const double &p_z, const double &p_om, const double &p_fi, const double &p_ka);
@@ -95,7 +95,7 @@ class TinyVersatilePoseGraphSLAM{
             RodriguesPoseRobustKernelW robust_kernel_W;
         };
 
-        static std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> get_AtPA_AtPB_pose_graph_rodrigues_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeRodrigues> &rodrigues_edges);
+        static std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> get_AtPA_AtPB_pose_graph_rodrigues_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeRodrigues> &edges);
         static double apply_result_rodrigues_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses);
 
         static void relative_pose_obs_eq_rodrigues_wc(Eigen::Matrix<double, 6, 1> &delta, double px_1, double py_1, double pz_1, double sx_1, double sy_1, double sz_1, double px_2, double py_2, double pz_2, double sx_2, double sy_2, double sz_2, double px_m, double py_m, double pz_m, double sx_m, double sy_m, double sz_m);
@@ -149,6 +149,22 @@ class TinyVersatilePoseGraphSLAM{
             QuaternionPoseUncertainty uncertainty_covariance_information_matrix_inverse;
             QuaternionPoseRobustKernelW robust_kernel_W;
         };
-    };
+
+        static std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> get_AtPA_AtPB_pose_graph_quaternion_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeQuaternion> &edges);
+        static double apply_result_quaternion_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses);
+
+        static void normalize_quaternion(QuaternionPose &pq);
+        static Eigen::Affine3d affine_matrix_from_pose_quaternion(const QuaternionPose &pq);
+        static QuaternionPose pose_quaternion_from_affine_matrix(const Eigen::Affine3d &m);
+        static double normalize_angle(double src_rad);
+
+        static void relative_pose_obs_eq_quaternion_wc(Eigen::Matrix<double, 7, 1> &delta, const double &px_1, const double &py_1, const double &pz_1, const double &q0_1, const double &q1_1, const double &q2_1, const double &q3_1, const double &px_2, const double &py_2, const double &pz_2, const double &q0_2, const double &q1_2, const double &q2_2, const double &q3_2, const double &px_m, const double &py_m, const double &pz_m, const double &q0_m, const double &q1_m, const double &q2_m, const double &q3_m);
+        static void relative_pose_obs_eq_quaternion_wc_jacobian(Eigen::Matrix<double, 7, 14, Eigen::RowMajor> &j, const double &px_1, const double &py_1, const double &pz_1, const double &q0_1, const double &q1_1, const double &q2_1, const double &q3_1, const double &px_2, const double &py_2, const double &pz_2, const double &q0_2, const double &q1_2, const double &q2_2, const double &q3_2);
+        static void relative_pose_quaternion_wc(Eigen::Matrix<double, 7, 1> &relative_pose, const double &px_1, const double &py_1, const double &pz_1, const double &q0_1, const double &q1_1, const double &q2_1, const double &q3_1, const double &px_2, const double &py_2, const double &pz_2, const double &q0_2, const double &q1_2, const double &q2_2, const double &q3_2);
+
+        static void quaternion_constraint(double &delta, const double &q0, const double &q1, const double &q2, const double &q3);
+
+        static void quaternion_constraint_jacobian(Eigen::Matrix<double, 1, 4> &j, const double &q0, const double &q1, const double &q2, const double &q3);
+    };       
 
 #endif
