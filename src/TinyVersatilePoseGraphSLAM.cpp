@@ -9,8 +9,6 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         tb_poses.emplace_back(pose_tait_bryan_from_affine_matrix(m));
     }
 
-    std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB;
-
     Eigen::SparseMatrix<double> AtPA_out(m_poses.size() * 6, m_poses.size() * 6);
     Eigen::SparseMatrix<double> AtPB_out(m_poses.size() * 6, 1);
 
@@ -94,10 +92,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         }
     }
 
-    AtPA_AtPB.first = AtPA_out;
-    AtPA_AtPB.second = AtPB_out;
-
-    return AtPA_AtPB;
+    return {AtPA_out, AtPB_out};
 }
 
 double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
@@ -223,4 +218,258 @@ Eigen::Affine3d TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(T
     m(2, 3) = pose.pz;
 
     return m;
+}
+
+double TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
+{
+    double result = 0.0;
+    std::vector<double> h_x;
+
+    double sum_sq = 0.0;
+    
+    for (int k = 0; k < x.outerSize(); ++k)
+    {
+        for (Eigen::SparseMatrix<double>::InnerIterator it(x, k); it; ++it)
+        {
+            h_x.push_back(it.value());
+        }
+    }
+    
+    if (h_x.size() == 6 * m_poses.size())
+    {
+        int counter = 0;
+
+        for (size_t i = 0; i < m_poses.size(); i++)
+        {
+            TinyVersatilePoseGraphSLAM::RodriguesPose pose = TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(m_poses[i]);
+            double px_update = h_x[counter++];
+            double py_update = h_x[counter++];
+            double pz_update = h_x[counter++];
+            double sx_update = h_x[counter++];
+            double sy_update = h_x[counter++];
+            double sz_update = h_x[counter++];
+
+            pose.px += px_update;
+            pose.py += py_update;
+            pose.pz += pz_update;
+            pose.sx += sx_update;
+            pose.sy += sy_update;
+            pose.sz += sz_update;
+            m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_rodrigues(pose);
+
+            sum_sq += px_update * px_update;
+            sum_sq += py_update * py_update;
+            sum_sq += pz_update * pz_update;
+            sum_sq += sx_update * sx_update;
+            sum_sq += sy_update * sy_update;
+            sum_sq += sz_update * sz_update;
+        }
+    }
+    else
+    {
+        return -1.0;
+    }
+
+    return sqrt(sum_sq);
+}
+
+TinyVersatilePoseGraphSLAM::RodriguesPose TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(Eigen::Affine3d m)
+{
+    #ifndef MAX
+    #define MAX(a,b) a>b?a:b
+    #endif
+
+//https://github.com/shimat/opencv_files_343/blob/master/include/x64/opencv2/core/affine.hpp
+//https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga61585db663d9da06b68e70cfbf6a1eac
+//https://docs.rs/opencv/0.22.1/opencv/calib3d/fn.rodrigues.html
+//https://github.com/opencv/opencv/blob/master/modules/calib3d/src/calibration.cpp
+	RodriguesPose rp;
+
+	double r_x = m(2,1) - m(1,2);
+	double r_y = m(0,2) - m(2,0);
+	double r_z = m(1,0) - m(0,1);
+
+	// Point3d r(R(2, 1) - R(1, 2), R(0, 2) - R(2, 0), R(1, 0) - R(0, 1));
+	double s = std::sqrt((r_x*r_x + r_y*r_y + r_z*r_z)*0.25);
+	double c = (m(0, 0) + m(1, 1) + m(2, 2) - 1)*0.5;
+	c = c > 1. ? 1. : c < -1. ? -1. : c;
+
+	double theta = acos(c);
+
+
+	if( s < 1e-8 )
+	{
+		double t;
+
+		if( c > 0 )
+			r_x = r_y = r_z = 0.0;
+		else
+		{
+			t = (m(0, 0) + 1)*0.5;
+			r_x = std::sqrt(MAX(t,0.));
+			t = (m(1, 1) + 1)*0.5;
+			r_y = std::sqrt(MAX(t,0.))*(m(0, 1) < 0 ? -1. : 1.);
+			t = (m(2, 2) + 1)*0.5;
+			r_z = std::sqrt(MAX(t,0.))*(m(0, 2) < 0 ? -1. : 1.);
+			if( fabs(r_x) < fabs(r_y) && fabs(r_x) < fabs(r_z) && (m(1, 2) > 0) != (r_y*r_z > 0) )
+				r_z = -r_z;
+			theta /= sqrt(r_x*r_x + r_y*r_y + r_z*r_z);// norm(r);
+			r_x *= theta;
+			r_y *= theta;
+			r_z *= theta;
+		}
+
+		rp.sx = r_x;
+		rp.sy = r_y;
+		rp.sz = r_z;
+
+		rp.px = m(0,3);
+		rp.py = m(1,3);
+		rp.pz = m(2,3);
+	}
+	else
+	{
+		double vth = 1/(2*s);
+		vth *= theta;
+		r_x *= vth;
+		r_y *= vth;
+		r_z *= vth;
+
+		rp.sx = r_x;
+		rp.sy = r_y;
+		rp.sz = r_z;
+
+		rp.px = m(0,3);
+		rp.py = m(1,3);
+		rp.pz = m(2,3);
+	}
+	return rp;
+}
+
+void TinyVersatilePoseGraphSLAM::orthogonalize_rotation(Eigen::Affine3d& m){
+	Eigen::Matrix4d ret = m.matrix();
+	Eigen::JacobiSVD<Eigen::Matrix3d> svd(ret.block<3,3>(0,0), Eigen::ComputeFullU | Eigen::ComputeFullV);
+	double d = (svd.matrixU() * svd.matrixV().transpose()).determinant();
+	Eigen::Matrix3d diag = Eigen::Matrix3d::Identity() * d;
+	ret.block<3,3>(0,0) = svd.matrixU() * diag * svd.matrixV().transpose();
+	m = Eigen::Affine3d (ret);
+
+#if 0
+	Eigen::Affine3d mtemp = m;
+
+	cv::Matx33d U, Vt;
+	cv::Vec3d W;
+	cv::Matx33d R (m(0,0), m(0,1), m(0,2),
+		 m(1,0), m(1,1), m(1,2),
+		 m(2,0), m(2,1), m(2,2));
+	cv::SVD::compute(R, W, U, Vt);
+
+	R = U*Vt;
+
+	m(0,0) = R(0,0);
+	m(0,1) = R(0,1);
+	m(0,2) = R(0,2);
+
+	m(1,0) = R(1,0);
+	m(1,1) = R(1,1);
+	m(1,2) = R(1,2);
+
+	m(2,0) = R(2,0);
+	m(2,1) = R(2,1);
+	m(2,2) = R(2,2);
+#endif
+}
+
+Eigen::Affine3d TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_rodrigues(const RodriguesPose& pr){
+//https://github.com/shimat/opencv_files_343/blob/master/include/x64/opencv2/core/affine.hpp
+//https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html#ga61585db663d9da06b68e70cfbf6a1eac
+//https://docs.rs/opencv/0.22.1/opencv/calib3d/fn.rodrigues.html
+//https://github.com/opencv/opencv/blob/master/modules/calib3d/src/calibration.cpp
+#if 0
+	double c = cos(theta);
+	double s = sin(theta);
+	double c1 = 1. - c;
+	double itheta = theta ? 1./theta : 0.;
+
+	r *= itheta;
+
+	Matx33d rrt( r.x*r.x, r.x*r.y, r.x*r.z, r.x*r.y, r.y*r.y, r.y*r.z, r.x*r.z, r.y*r.z, r.z*r.z );
+	Matx33d r_x(    0, -r.z,  r.y,
+				  r.z,    0, -r.x,
+				 -r.y,  r.x,    0 );
+
+	// R = cos(theta)*I + (1 - cos(theta))*r*rT + sin(theta)*[r_x]
+	Matx33d R = c*Matx33d::eye() + c1*rrt + s*r_x;
+#endif
+
+	Eigen::Affine3d m = Eigen::Affine3d::Identity();
+
+	double norm = sqrt( (pr.sx)*(pr.sx) + (pr.sy)*(pr.sy) + (pr.sz)*(pr.sz) );
+	double theta = norm;
+	double c = cos(theta);
+	double s = sin(theta);
+	double c1 = 1. - c;
+
+	double x = pr.sx;
+	double y = pr.sy;
+	double z = pr.sz;
+
+	double itheta = theta ? 1./theta : 0.;
+
+	x *= itheta;
+	y *= itheta;
+	z *= itheta;
+
+	double rrt[9] = {
+			x*x, x*y, x*z, x*y, y*y, y*z, x*z, y*z, z*z
+	};
+
+
+	double r_x[9] = {
+			0, -z,  y,
+			z,  0, -x,
+		   -y, x,   0
+	};
+
+	double c_eye[9] = {c, 0, 0, 0, c ,0, 0, 0, c };
+
+	double c1_rrt[9] = {c1 * rrt[0], c1 * rrt[1], c1 * rrt[2], c1 * rrt[3], c1 * rrt[4], c1 * rrt[5], c1 * rrt[6], c1 * rrt[7], c1 * rrt[8] };
+
+	double s_r_x[9] = {s*r_x[0], s*r_x[1], s*r_x[2], s*r_x[3], s*r_x[4], s*r_x[5], s*r_x[6], s*r_x[7], s*r_x[8]};
+
+
+	// R = cos(theta)*I + (1 - cos(theta))*r*rT + sin(theta)*[r_x]
+	//Matx33d R = c*Matx33d::eye() + c1*rrt + s*r_x;
+
+	double R[9] = { c_eye[0] + c1_rrt[0] + s_r_x[0],
+					 c_eye[1] + c1_rrt[1] + s_r_x[1],
+					 c_eye[2] + c1_rrt[2] + s_r_x[2],
+					 c_eye[3] + c1_rrt[3] + s_r_x[3],
+					 c_eye[4] + c1_rrt[4] + s_r_x[4],
+					 c_eye[5] + c1_rrt[5] + s_r_x[5],
+					 c_eye[6] + c1_rrt[6] + s_r_x[6],
+					 c_eye[7] + c1_rrt[7] + s_r_x[7],
+					 c_eye[8] + c1_rrt[8] + s_r_x[8] };
+
+
+	m(0,0) = R[0];
+	m(0,1) = R[1];
+	m(0,2) = R[2];
+
+	m(1,0) = R[3];
+	m(1,1) = R[4];
+	m(1,2) = R[5];
+
+	m(2,0) = R[6];
+	m(2,1) = R[7];
+	m(2,2) = R[8];
+
+
+	m(0,3) = pr.px;
+	m(1,3) = pr.py;
+	m(2,3) = pr.pz;
+
+	orthogonalize_rotation(m);
+
+	return m;
 }

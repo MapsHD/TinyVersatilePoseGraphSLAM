@@ -53,7 +53,11 @@ else()
     MESSAGE(STATUS "FreeGlut include dir: ${FREEGLUT_INCLUDE_DIR}")
 endif ()
 
-add_executable(example examples/example.cpp src/TinyVersatilePoseGraphSLAM.cpp src/TinyVersatilePoseGraphSLAM_AtPA_AtPb.cpp)
+add_executable(
+        example examples/example.cpp 
+        src/TinyVersatilePoseGraphSLAM.cpp 
+        src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_TaitBryan.cpp
+        src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_Rodrigues.cpp)
 target_link_libraries(
   example
   PRIVATE

@@ -35,6 +35,7 @@ inline double random(double low, double high)
 
 std::vector<Eigen::Affine3d> m_poses;
 std::vector<TinyVersatilePoseGraphSLAM::EdgeTaitBryan> tb_edges;
+std::vector<TinyVersatilePoseGraphSLAM::EdgeRodrigues> rodrigues_edges;
 
 int main(int argc, char *argv[]){
     for (size_t i = 0; i < 100; i++)
@@ -77,7 +78,35 @@ int main(int argc, char *argv[]){
         edge.uncertainty_covariance_information_matrix_inverse.fi_1_sigma_deg = 1.0; // 1degree
         edge.uncertainty_covariance_information_matrix_inverse.ka_1_sigma_deg = 1.0; // 1degree
 
+        edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
         tb_edges.emplace_back(edge);
+
+        TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+        r_edge.index_from = i - 1;
+        r_edge.index_to = i;
+        r_edge.measurement = m_poses[r_edge.index_from].inverse() * m_poses[r_edge.index_to];
+        r_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0; // 1degree
+
+        r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+        rodrigues_edges.emplace_back(r_edge);
 	}
 
 	for (size_t i = 101; i < 200; i++)
@@ -93,7 +122,35 @@ int main(int argc, char *argv[]){
         edge.uncertainty_covariance_information_matrix_inverse.fi_1_sigma_deg = 1.0; // 1degree
         edge.uncertainty_covariance_information_matrix_inverse.ka_1_sigma_deg = 1.0; // 1degree
 
+        edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
         tb_edges.emplace_back(edge);
+
+        TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+        r_edge.index_from = i - 1;
+        r_edge.index_to = i;
+        r_edge.measurement = m_poses[r_edge.index_from].inverse() * m_poses[r_edge.index_to];
+        r_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0; // 1degree
+
+        r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+        rodrigues_edges.emplace_back(r_edge);
 	}
 
 	for (size_t i = 0; i < 100; i += 10)
@@ -109,7 +166,35 @@ int main(int argc, char *argv[]){
         edge.uncertainty_covariance_information_matrix_inverse.fi_1_sigma_deg = 1.0; // 1degree
         edge.uncertainty_covariance_information_matrix_inverse.ka_1_sigma_deg = 1.0; // 1degree
 
+        edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+        edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+        
         tb_edges.emplace_back(edge);
+
+        TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+        r_edge.index_from = i;
+        r_edge.index_to = i + 100;
+        r_edge.measurement = m_poses[r_edge.index_from].inverse() * m_poses[r_edge.index_to];
+        r_edge.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m = 0.001; //1mm
+        r_edge.uncertainty_covariance_information_matrix_inverse.sx_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sy_1_sigma = 1.0; // 1degree
+        r_edge.uncertainty_covariance_information_matrix_inverse.sz_1_sigma = 1.0; // 1degree
+
+        r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+        r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+        rodrigues_edges.emplace_back(r_edge);
 	}
 
     if (false == initGL(&argc, argv))
@@ -233,6 +318,27 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
 
             break;
         }
+        case 'r':
+        {
+            std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_rodrigues_wc(m_poses, rodrigues_edges);
+
+            for (int row = 0; row < 6; row++)
+            {
+                AtPA_AtPB.first.coeffRef(row, row) += 1;
+            }
+
+            std::cout << "start solving AtPA=AtPB" << std::endl;
+            Eigen::SimplicialCholesky<Eigen::SparseMatrix<double>> solver(AtPA_AtPB.first);
+
+            std::cout << "x = solver.solve(AtPB)" << std::endl;
+            Eigen::SparseMatrix<double> x = solver.solve(AtPA_AtPB.second);
+
+            double update = TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(x, m_poses);
+
+            std::cout << "update: " << update << std::endl;
+
+            break;
+        }
     }
     printHelp();
     glutPostRedisplay();
@@ -293,7 +399,8 @@ void printHelp()
 {
     std::cout << "-------help-------" << std::endl;
     std::cout << "n: add noise to poses" << std::endl;
-    std::cout << "t: optimize (Tait-Bryan)" << std::endl;
+    std::cout << "t: optimize single iteration Gauss-Newton (rotation agle reprezentation Tait-Bryan)" << std::endl;
+    std::cout << "r: optimize single iteration Gauss-Newton (rotation agle reprezentation Rodrigues)" << std::endl;
 }
 
 // git submodule add https://gitlab.com/libeigen/eigen.git eigen
