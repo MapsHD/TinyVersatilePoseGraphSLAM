@@ -172,7 +172,7 @@ double TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(const Eigen::Sparse
     return sqrt(sum_sq);
 }
 
-TinyVersatilePoseGraphSLAM::RodriguesPose TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(Eigen::Affine3d m)
+TinyVersatilePoseGraphSLAM::RodriguesPose TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(const Eigen::Affine3d &m)
 {
     #ifndef MAX
     #define MAX(a,b) a>b?a:b

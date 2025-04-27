@@ -147,7 +147,7 @@ double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::Spars
     return sqrt(sum_sq);
 }
 
-TinyVersatilePoseGraphSLAM::TaitBryanPose TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(Eigen::Affine3d m)
+TinyVersatilePoseGraphSLAM::TaitBryanPose TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(const Eigen::Affine3d &m)
 {
     TaitBryanPose pose;
 
@@ -189,7 +189,7 @@ TinyVersatilePoseGraphSLAM::TaitBryanPose TinyVersatilePoseGraphSLAM::pose_tait_
     return pose;
 }
 
-Eigen::Affine3d TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(TaitBryanPose pose)
+Eigen::Affine3d TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(const TaitBryanPose &pose)
 {
     Eigen::Affine3d m = Eigen::Affine3d::Identity();
 

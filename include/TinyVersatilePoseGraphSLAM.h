@@ -53,8 +53,8 @@ class TinyVersatilePoseGraphSLAM{
         static void relative_pose_obs_eq_tait_bryan_wc_case1_AtPA_simplified(Eigen::Matrix<double, 12, 12> &AtPA, const double &tx_1, const double &ty_1, const double &tz_1, const double &om_1, const double &fi_1, const double &ka_1, const double &tx_2, const double &ty_2, const double &tz_2, const double &om_2, const double &fi_2, const double &ka_2, const double &p_x, const double &p_y, const double &p_z, const double &p_om, const double &p_fi, const double &p_ka);
         static void relative_pose_obs_eq_tait_bryan_wc_case1_AtPB_simplified(Eigen::Matrix<double, 12, 1> &AtPB, const double &tx_1, const double &ty_1, const double &tz_1, const double &om_1, const double &fi_1, const double &ka_1, const double &tx_2, const double &ty_2, const double &tz_2, const double &om_2, const double &fi_2, const double &ka_2, const double &tx_m, const double &ty_m, const double &tz_m, const double &om_m, const double &fi_m, const double &ka_m, const double &p_x, const double &p_y, const double &p_z, const double &p_om, const double &p_fi, const double &p_ka);
 
-        static TaitBryanPose pose_tait_bryan_from_affine_matrix(Eigen::Affine3d m);
-        static Eigen::Affine3d affine_matrix_from_pose_tait_bryan(TaitBryanPose pose);
+        static TaitBryanPose pose_tait_bryan_from_affine_matrix(const Eigen::Affine3d &m);
+        static Eigen::Affine3d affine_matrix_from_pose_tait_bryan(const TaitBryanPose &pose);
 
         //----------- Rodrigues ----------
         struct RodriguesPose
@@ -102,7 +102,7 @@ class TinyVersatilePoseGraphSLAM{
         static void relative_pose_obs_eq_rodrigues_wc_jacobian(Eigen::Matrix<double, 6, 12, Eigen::RowMajor> &j, double px_1, double py_1, double pz_1, double sx_1, double sy_1, double sz_1, double px_2, double py_2, double pz_2, double sx_2, double sy_2, double sz_2);
         static void relative_pose_rodrigues_wc(Eigen::Matrix<double, 6, 1> &relative_pose, double px_1, double py_1, double pz_1, double sx_1, double sy_1, double sz_1, double px_2, double py_2, double pz_2, double sx_2, double sy_2, double sz_2);
 
-        static RodriguesPose pose_rodrigues_from_affine_matrix(Eigen::Affine3d m);
+        static RodriguesPose pose_rodrigues_from_affine_matrix(const Eigen::Affine3d &m);
         static void orthogonalize_rotation(Eigen::Affine3d& m);
         static Eigen::Affine3d affine_matrix_from_pose_rodrigues(const RodriguesPose& pr);
 
@@ -163,7 +163,6 @@ class TinyVersatilePoseGraphSLAM{
         static void relative_pose_quaternion_wc(Eigen::Matrix<double, 7, 1> &relative_pose, const double &px_1, const double &py_1, const double &pz_1, const double &q0_1, const double &q1_1, const double &q2_1, const double &q3_1, const double &px_2, const double &py_2, const double &pz_2, const double &q0_2, const double &q1_2, const double &q2_2, const double &q3_2);
 
         static void quaternion_constraint(double &delta, const double &q0, const double &q1, const double &q2, const double &q3);
-
         static void quaternion_constraint_jacobian(Eigen::Matrix<double, 1, 4> &j, const double &q0, const double &q1, const double &q2, const double &q3);
     };       
 
