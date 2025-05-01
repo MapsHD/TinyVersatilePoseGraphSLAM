@@ -16,15 +16,23 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
     {
         const auto &e = rodrigues_edges[i];
         RodriguesPose rodrigues_measurement = pose_rodrigues_from_affine_matrix(e.measurement);
-        double wx = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m);
+        /*double wx = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m);
         double wy = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m);
-        double wz = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m);
-        const double &sx = e.uncertainty_covariance_information_matrix_inverse.sx_1_sigma;
-        double wsx = 1.0 / (sx * sx);
-        const double &sy = e.uncertainty_covariance_information_matrix_inverse.sy_1_sigma;
-        double wsy = 1.0 / (sy * sy);
-        const double &sz = e.uncertainty_covariance_information_matrix_inverse.sz_1_sigma;
-        double wsz = 1.0 / (sz * sz);
+        double wz = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m);*/
+
+        Eigen::Matrix<double, 6, 6> information_matrix = e.uncertainty_covariance_information_matrix_inverse.covariance.inverse();
+
+        //Eigen::Matrix3d inf_m = e.uncertainty_covariance_information_matrix_inverse.cov.inverse();
+        //Eigen::Matrix3d cov;
+        //cov(0,0) = 
+        //const double &sx = e.uncertainty_covariance_information_matrix_inverse.sx_1_sigma;
+        //double wsx = 1.0 / (sx * sx);
+        //const double &sy = e.uncertainty_covariance_information_matrix_inverse.sy_1_sigma;
+        //double wsy = 1.0 / (sy * sy);
+        //const double &sz = e.uncertainty_covariance_information_matrix_inverse.sz_1_sigma;
+        //double wsz = 1.0 / (sz * sz);
+
+
 
         Eigen::Matrix<double, 6, 1> delta;
         relative_pose_obs_eq_rodrigues_wc(
@@ -92,12 +100,21 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
             tripletListB.emplace_back(ir + 4, 0, delta(4, 0));
             tripletListB.emplace_back(ir + 5, 0, delta(5, 0));
 
-            tripletListP.emplace_back(ir, ir, wx * e.robust_kernel_W.px_robust_kernel_W);
-            tripletListP.emplace_back(ir + 1, ir + 1, wy * e.robust_kernel_W.py_robust_kernel_W);
-            tripletListP.emplace_back(ir + 2, ir + 2, wz * e.robust_kernel_W.pz_robust_kernel_W);
-            tripletListP.emplace_back(ir + 3, ir + 3, wsx * e.robust_kernel_W.sx_robust_kernel_W);
-            tripletListP.emplace_back(ir + 4, ir + 4, wsy * e.robust_kernel_W.sy_robust_kernel_W);
-            tripletListP.emplace_back(ir + 5, ir + 5, wsz * e.robust_kernel_W.sz_robust_kernel_W);
+            tripletListP.emplace_back(ir, ir, information_matrix(0,0) * e.robust_kernel_W.px_robust_kernel_W);
+            tripletListP.emplace_back(ir + 1, ir + 1, information_matrix(1,1) * e.robust_kernel_W.py_robust_kernel_W);
+            tripletListP.emplace_back(ir + 2, ir + 2, information_matrix(2,2) * e.robust_kernel_W.pz_robust_kernel_W);
+            
+            tripletListP.emplace_back(ir + 3, ir + 3, information_matrix(3,3) * e.robust_kernel_W.sx_robust_kernel_W);
+            tripletListP.emplace_back(ir + 3, ir + 4, information_matrix(3,4) * e.robust_kernel_W.sx_robust_kernel_W);
+            tripletListP.emplace_back(ir + 3, ir + 5, information_matrix(3,5) * e.robust_kernel_W.sx_robust_kernel_W);
+
+            tripletListP.emplace_back(ir + 4, ir + 3, information_matrix(4,3) * e.robust_kernel_W.sy_robust_kernel_W);
+            tripletListP.emplace_back(ir + 4, ir + 4, information_matrix(4,4) * e.robust_kernel_W.sy_robust_kernel_W);
+            tripletListP.emplace_back(ir + 4, ir + 5, information_matrix(4,5) * e.robust_kernel_W.sy_robust_kernel_W);
+
+            tripletListP.emplace_back(ir + 5, ir + 3, information_matrix(5,3) * e.robust_kernel_W.sz_robust_kernel_W);
+            tripletListP.emplace_back(ir + 5, ir + 4, information_matrix(5,4) * e.robust_kernel_W.sz_robust_kernel_W);
+            tripletListP.emplace_back(ir + 5, ir + 5, information_matrix(5,5) * e.robust_kernel_W.sz_robust_kernel_W);
         }
         Eigen::SparseMatrix<double> matA(tripletListB.size(), m_poses.size() * 6);
         Eigen::SparseMatrix<double> matP(tripletListB.size(), tripletListB.size());

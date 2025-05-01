@@ -59,6 +59,7 @@ add_executable(
         src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_TaitBryan.cpp
         src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_Rodrigues.cpp
 	src/TinyVersatilePoseGraphSLAM_AtPA_AtPb_Quaternion.cpp
+	src/TinyVersatilePoseGraphSLAM_uncertainty_calculator.cpp
 )
 target_link_libraries(
   example

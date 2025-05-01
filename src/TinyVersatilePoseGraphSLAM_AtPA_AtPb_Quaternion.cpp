@@ -1,4 +1,5 @@
 #include <TinyVersatilePoseGraphSLAM.h>
+#include <iostream>
 
 std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_quaternion_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeQuaternion> &edges)
 {
@@ -17,17 +18,9 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
     {
         const auto &e = edges[i];
         QuaternionPose measurement = pose_quaternion_from_affine_matrix(e.measurement);
-        double wx = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m);
-        double wy = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m);
-        double wz = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m);
-        const double &q0 = e.uncertainty_covariance_information_matrix_inverse.q0_1_sigma;
-        double wq0 = 1.0 / (q0 * q0);
-        const double &q1 = e.uncertainty_covariance_information_matrix_inverse.q1_1_sigma;
-        double wq1 = 1.0 / (q1 * q1);
-        const double &q2 = e.uncertainty_covariance_information_matrix_inverse.q2_1_sigma;
-        double wq2 = 1.0 / (q2 * q2);
-        const double &q3 = e.uncertainty_covariance_information_matrix_inverse.q3_1_sigma;
-        double wq3 = 1.0 / (q3 * q3);
+       
+        Eigen::MatrixXd A = e.uncertainty_covariance_information_matrix_inverse.covariance;
+        Eigen::MatrixXd information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
 
         Eigen::Matrix<double, 7, 1> delta;
         relative_pose_obs_eq_quaternion_wc(
@@ -103,13 +96,34 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         tripletListB.emplace_back(ir + 5, 0, delta(5, 0));
         tripletListB.emplace_back(ir + 6, 0, delta(6, 0));
 
-        tripletListP.emplace_back(ir, ir, wx * e.robust_kernel_W.px_robust_kernel_W);
-        tripletListP.emplace_back(ir + 1, ir + 1, wy * e.robust_kernel_W.py_robust_kernel_W);
-        tripletListP.emplace_back(ir + 2, ir + 2, wz * e.robust_kernel_W.pz_robust_kernel_W);
-        tripletListP.emplace_back(ir + 3, ir + 3, q0 * e.robust_kernel_W.q0_robust_kernel_W);
-        tripletListP.emplace_back(ir + 4, ir + 4, q1 * e.robust_kernel_W.q1_robust_kernel_W);
-        tripletListP.emplace_back(ir + 5, ir + 5, q2 * e.robust_kernel_W.q2_robust_kernel_W);
-        tripletListP.emplace_back(ir + 6, ir + 6, q3 * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir, ir, information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W);
+        tripletListP.emplace_back(ir + 1, ir + 1, information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W);
+        tripletListP.emplace_back(ir + 2, ir + 2, information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W);
+
+
+        tripletListP.emplace_back(ir + 3, ir + 3, information_matrix(3, 3) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 4, information_matrix(3, 4) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 5, information_matrix(3, 5) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 6, information_matrix(3, 6) * e.robust_kernel_W.q0_robust_kernel_W);
+
+
+        tripletListP.emplace_back(ir + 4, ir + 3, information_matrix(4, 3) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 4, information_matrix(4, 4) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 5, information_matrix(4, 5) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 6, information_matrix(4, 6) * e.robust_kernel_W.q1_robust_kernel_W);
+
+
+        tripletListP.emplace_back(ir + 5, ir + 3, information_matrix(5, 3) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 4, information_matrix(5, 4) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 5, information_matrix(5, 5) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 6, information_matrix(5, 6) * e.robust_kernel_W.q2_robust_kernel_W);
+
+        tripletListP.emplace_back(ir + 6, ir + 3, information_matrix(6, 3) * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir + 6, ir + 4, information_matrix(6, 4) * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir + 6, ir + 5, information_matrix(6, 5) * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir + 6, ir + 6, information_matrix(6, 6) * e.robust_kernel_W.q3_robust_kernel_W);
+
+
     }
 
     for (size_t i = 0; i < m_poses.size(); i++)

@@ -1,4 +1,5 @@
 #include <TinyVersatilePoseGraphSLAM.h>
+//#include <iostream>
 
 std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
 {
@@ -11,20 +12,18 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
     Eigen::SparseMatrix<double> AtPA_out(m_poses.size() * 6, m_poses.size() * 6);
     Eigen::SparseMatrix<double> AtPB_out(m_poses.size() * 6, 1);
 
+    //int counter = 0;
+
     for (const auto &e : tb_edges)
     {
+        //std::cout << "calculated: " << counter << " of " << tb_edges.size() << std::endl;
+        //counter++;
         TaitBryanPose tb_measurement = pose_tait_bryan_from_affine_matrix(e.measurement);
-        double wx = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.px_1_sigma_m);
-        double wy = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m);
-        double wz = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m);
-        double om_rad = e.uncertainty_covariance_information_matrix_inverse.om_1_sigma_deg * M_PI / 180.0;
-        double wom = 1.0 / (om_rad * om_rad);
-        double fi_rad = e.uncertainty_covariance_information_matrix_inverse.fi_1_sigma_deg * M_PI / 180.0;
-        double wfi = 1.0 / (fi_rad * fi_rad);
-        double ka_rad = e.uncertainty_covariance_information_matrix_inverse.ka_1_sigma_deg * M_PI / 180.0;
-        double wka = 1.0 / (ka_rad * ka_rad);
+        
+        Eigen::Matrix<double, 6, 6> information_matrix = e.uncertainty_covariance_information_matrix_inverse.covariance.inverse();
 
-        Eigen::Matrix<double, 12, 12> AtPA;
+        Eigen::Matrix<double, 12, 12>
+            AtPA;
         relative_pose_obs_eq_tait_bryan_wc_case1_AtPA_simplified(AtPA,
                                                                  tb_poses[e.index_from].px,
                                                                  tb_poses[e.index_from].py,
@@ -38,12 +37,12 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
                                                                  tb_poses[e.index_to].om,
                                                                  tb_poses[e.index_to].fi,
                                                                  tb_poses[e.index_to].ka,
-                                                                 wx * e.robust_kernel_W.px_robust_kernel_W,
-                                                                 wy * e.robust_kernel_W.py_robust_kernel_W,
-                                                                 wz * e.robust_kernel_W.pz_robust_kernel_W,
-                                                                 wom * e.robust_kernel_W.om_robust_kernel_W,
-                                                                 wfi * e.robust_kernel_W.fi_robust_kernel_W,
-                                                                 wka * e.robust_kernel_W.ka_robust_kernel_W);
+                                                                 information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W,
+                                                                 information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W,
+                                                                 information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W,
+                                                                 information_matrix(3, 3) * e.robust_kernel_W.om_robust_kernel_W,
+                                                                 information_matrix(4, 4) * e.robust_kernel_W.fi_robust_kernel_W,
+                                                                 information_matrix(5, 5) * e.robust_kernel_W.ka_robust_kernel_W);
         Eigen::Matrix<double, 12, 1> AtPB;
         relative_pose_obs_eq_tait_bryan_wc_case1_AtPB_simplified(AtPB,
                                                                  tb_poses[e.index_from].px,
@@ -64,12 +63,12 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
                                                                  tb_measurement.om,
                                                                  tb_measurement.fi,
                                                                  tb_measurement.ka,
-                                                                 wx * e.robust_kernel_W.px_robust_kernel_W,
-                                                                 wy * e.robust_kernel_W.py_robust_kernel_W,
-                                                                 wz * e.robust_kernel_W.pz_robust_kernel_W,
-                                                                 wom * e.robust_kernel_W.om_robust_kernel_W,
-                                                                 wfi * e.robust_kernel_W.fi_robust_kernel_W,
-                                                                 wka * e.robust_kernel_W.ka_robust_kernel_W);
+                                                                 information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W,
+                                                                 information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W,
+                                                                 information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W,
+                                                                 information_matrix(3, 3) * e.robust_kernel_W.om_robust_kernel_W,
+                                                                 information_matrix(4, 4) * e.robust_kernel_W.fi_robust_kernel_W,
+                                                                 information_matrix(5, 5) * e.robust_kernel_W.ka_robust_kernel_W);
         int ic_1 = e.index_from * 6;
         int ic_2 = e.index_to * 6;
 
