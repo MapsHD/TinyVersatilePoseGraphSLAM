@@ -34,7 +34,7 @@ inline double random(double low, double high)
     return dist(gen);
 }
 
-std::vector<Eigen::Affine3d> m_poses;
+std::vector<std::pair<Eigen::Affine3d, bool>> m_poses;
 std::vector<TinyVersatilePoseGraphSLAM::EdgeTaitBryan> tb_edges;
 std::vector<TinyVersatilePoseGraphSLAM::EdgeRodrigues> rodrigues_edges;
 std::vector<TinyVersatilePoseGraphSLAM::EdgeQuaternion> quaternion_edges;
@@ -44,46 +44,69 @@ int main(int argc, char *argv[])
     if (argc == 1)
     {
 
+        #if 0
         for (size_t i = 0; i < 100; i++)
         {
             TinyVersatilePoseGraphSLAM::TaitBryanPose p;
             p.px = i;
             p.py = -1;
-            p.pz = random(-0.01, 0.01);
-            p.om = random(-0.01, 0.01);
-            p.fi = random(-0.01, 0.01);
-            p.ka = random(-0.01, 0.01);
+            p.pz = 0;//random(-0.01, 0.01);
+            p.om = 0;//random(-0.01, 0.01);
+            p.fi = 0;//random(-0.01, 0.01);
+            p.ka = 0;//random(-0.01, 0.01);
 
             Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
-            m_poses.push_back(m);
+            m_poses.emplace_back(m, true);
         }
-        for (size_t i = 0; i < 100; i++)
-        {
-            TinyVersatilePoseGraphSLAM::TaitBryanPose p;
-            p.px = i;
-            p.py = 1;
-            p.pz = random(-0.01, 0.01);
-            p.om = random(-0.01, 0.01);
-            p.fi = random(-0.01, 0.01);
-            p.ka = random(-0.01, 0.01);
+        //100
+        TinyVersatilePoseGraphSLAM::TaitBryanPose p;
+        p.px = 0;
+        p.py = -5;
+        p.pz = 0;//random(-0.01, 0.01);
+        p.om = 0;//random(-0.01, 0.01);
+        p.fi = 0;//random(-0.01, 0.01);
+        p.ka = 0;//random(-0.01, 0.01);
 
-            Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
-            m_poses.push_back(m);
-        }
+        Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+        m_poses.emplace_back(m, false);
+
+        //101
+        p.px = 10;
+        p.py = -6;
+        p.pz = 0;//random(-0.01, 0.01);
+        p.om = 0;//random(-0.01, 0.01);
+        p.fi = 0;//random(-0.01, 0.01);
+        p.ka = 0;//random(-0.01, 0.01);
+
+        m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+        m_poses.emplace_back(m, false);
+
+        // 102
+        p.px = 100;
+        p.py = -3;
+        p.pz = 0; // random(-0.01, 0.01);
+        p.om = 0; // random(-0.01, 0.01);
+        p.fi = 0; // random(-0.01, 0.01);
+        p.ka = 0; // random(-0.01, 0.01);
+
+        m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+        m_poses.emplace_back(m, false);
 
         for (size_t i = 1; i < 100; i++)
         {
             TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
             edge.index_from = i - 1;
             edge.index_to = i;
-            edge.measurement = m_poses[edge.index_from].inverse() * m_poses[edge.index_to];
-            edge.uncertainty_covariance_information_matrix_inverse.covariance = Eigen::Matrix<double, 6, 6>::Identity();
-            edge.uncertainty_covariance_information_matrix_inverse.covariance(0, 0) = 0.01;
-            edge.uncertainty_covariance_information_matrix_inverse.covariance(1, 1) = 0.02;
-            edge.uncertainty_covariance_information_matrix_inverse.covariance(2, 2) = 0.03;
-            edge.uncertainty_covariance_information_matrix_inverse.covariance(3, 3) = 0.04;
-            edge.uncertainty_covariance_information_matrix_inverse.covariance(4, 4) = 0.05;
-            edge.uncertainty_covariance_information_matrix_inverse.covariance(5, 5) = 0.06;
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.covariance(0, 0) = 0.1;
+            edge.covariance(1, 1) = 0.1;
+            edge.covariance(2, 2) = 0.1;
+            edge.covariance(3, 3) = 0.01 / 180.0 * M_PI;
+            edge.covariance(4, 4) = 0.01 / 180.0 * M_PI;
+            edge.covariance(5, 5) = 0.01 / 180.0 * M_PI;
+
+            edge.information_matrix = edge.covariance.inverse();
 
             edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -98,12 +121,15 @@ int main(int argc, char *argv[])
 
             r_edge.index_from = i - 1;
             r_edge.index_to = i;
-            r_edge.measurement = m_poses[r_edge.index_from].inverse() * m_poses[r_edge.index_to];
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
 
-            r_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+            r_edge.covariance =
                 TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
-                    edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                    edge.covariance,
                     TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            //r_edge.information_matrix = r_edge.covariance.inverse();
+            Eigen::MatrixXd A = r_edge.covariance;
+            r_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
 
             r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -118,12 +144,366 @@ int main(int argc, char *argv[])
 
             q_edge.index_from = i - 1;
             q_edge.index_to = i;
-            q_edge.measurement = m_poses[q_edge.index_from].inverse() * m_poses[q_edge.index_to];
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
 
-            q_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+            q_edge.covariance =
                 TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
-                    edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                    edge.covariance,
                     TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+
+            A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+
+            q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+            quaternion_edges.emplace_back(q_edge);
+        }
+
+        {
+            //100
+            TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
+            edge.index_from = 0;
+            edge.index_to = 100;
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.covariance(0, 0) = 0.01;
+            edge.covariance(1, 1) = 0.01;
+            edge.covariance(2, 2) = 0.01;
+            edge.covariance(3, 3) = 0.01;
+            edge.covariance(4, 4) = 0.01;
+            edge.covariance(5, 5) = 0.01;
+
+            edge.information_matrix = edge.covariance.inverse();
+
+            edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
+            tb_edges.emplace_back(edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+            r_edge.index_from = edge.index_from;
+            r_edge.index_to = edge.index_to;
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
+
+            r_edge.covariance =
+                TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            //r_edge.information_matrix = r_edge.covariance.inverse();
+            Eigen::MatrixXd A = r_edge.covariance;
+            r_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+            
+            r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+            rodrigues_edges.emplace_back(r_edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+            q_edge.index_from = edge.index_from;
+            q_edge.index_to = edge.index_to;
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
+
+            q_edge.covariance =
+                TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+
+            A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+
+            q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+            quaternion_edges.emplace_back(q_edge);
+        }
+
+        {
+            // 101
+            TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
+            edge.index_from = 10;
+            edge.index_to = 101;
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.covariance(0, 0) = 0.01;
+            edge.covariance(1, 1) = 0.01;
+            edge.covariance(2, 2) = 0.01;
+            edge.covariance(3, 3) = 0.01;
+            edge.covariance(4, 4) = 0.01;
+            edge.covariance(5, 5) = 0.01;
+
+            edge.information_matrix = edge.covariance.inverse();
+
+            edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
+            tb_edges.emplace_back(edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+            r_edge.index_from = edge.index_from;
+            r_edge.index_to = edge.index_to;
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
+
+            r_edge.covariance =
+                TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            //r_edge.information_matrix = r_edge.covariance.inverse();
+            Eigen::MatrixXd A = r_edge.covariance;
+            r_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+
+            r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+            rodrigues_edges.emplace_back(r_edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+            q_edge.index_from = edge.index_from;
+            q_edge.index_to = edge.index_to;
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
+
+            q_edge.covariance =
+                TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+
+            A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+
+            q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+            quaternion_edges.emplace_back(q_edge);
+        }
+
+        {
+            // 102
+            TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
+            edge.index_from = 99;
+            edge.index_to = 102;
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.covariance(0, 0) = 0.01;
+            edge.covariance(1, 1) = 0.01;
+            edge.covariance(2, 2) = 0.01;
+            edge.covariance(3, 3) = 0.01;
+            edge.covariance(4, 4) = 0.01;
+            edge.covariance(5, 5) = 0.01;
+
+            edge.information_matrix = edge.covariance.inverse();
+
+            edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
+            tb_edges.emplace_back(edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+            r_edge.index_from = edge.index_from;
+            r_edge.index_to = edge.index_to;
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
+
+            r_edge.covariance =
+                TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            //r_edge.information_matrix = r_edge.covariance.inverse();
+            Eigen::MatrixXd A = r_edge.covariance;
+            r_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+
+            r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+            rodrigues_edges.emplace_back(r_edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+            q_edge.index_from = edge.index_from;
+            q_edge.index_to = edge.index_to;
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
+
+            q_edge.covariance =
+                TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+
+            A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+
+            q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+            q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+            quaternion_edges.emplace_back(q_edge);
+        }
+
+        {
+            TinyVersatilePoseGraphSLAM::TaitBryanPose tb_pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[100].first);
+            tb_pose.px += 1;//random(-0.1, 0.1);
+            tb_pose.py += 0;//random(-0.1, 0.1);
+            tb_pose.pz += 0;//random(-0.1, 0.1);
+            tb_pose.om += 0;//random(-0.01, 0.01);
+            tb_pose.fi += 0;//random(-0.01, 0.01);
+            tb_pose.ka += 0;//random(-0.01, 0.01);
+            m_poses[100].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(tb_pose);
+        }
+
+        {
+            TinyVersatilePoseGraphSLAM::TaitBryanPose tb_pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[101].first);
+            tb_pose.px -= 1; // random(-0.1, 0.1);
+            tb_pose.py += 1; // random(-0.1, 0.1);
+            tb_pose.pz += 0; // random(-0.1, 0.1);
+            tb_pose.om += 0; // random(-0.01, 0.01);
+            tb_pose.fi += 0; // random(-0.01, 0.01);
+            tb_pose.ka += 0; // random(-0.01, 0.01);
+            m_poses[101].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(tb_pose);
+        }
+
+        {
+            TinyVersatilePoseGraphSLAM::TaitBryanPose tb_pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[102].first);
+            tb_pose.px += 1; // random(-0.1, 0.1);
+            tb_pose.py += 0; // random(-0.1, 0.1);
+            tb_pose.pz += 1; // random(-0.1, 0.1);
+            tb_pose.om += 0; // random(-0.01, 0.01);
+            tb_pose.fi += 0; // random(-0.01, 0.01);
+            tb_pose.ka += 0; // random(-0.01, 0.01);
+            m_poses[102].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(tb_pose);
+        }
+        #endif
+#if 1
+        for (size_t i = 0; i < 100; i++)
+        {
+            TinyVersatilePoseGraphSLAM::TaitBryanPose p;
+            p.px = i;
+            p.py = -1;
+            p.pz = random(-0.01, 0.01);
+            p.om = random(-0.01, 0.01);
+            p.fi = random(-0.01, 0.01);
+            p.ka = random(-0.01, 0.01);
+
+            Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+            m_poses.emplace_back(m, true);
+        }
+        for (size_t i = 0; i < 100; i++)
+        {
+            TinyVersatilePoseGraphSLAM::TaitBryanPose p;
+            p.px = i;
+            p.py = 1;
+            p.pz = random(-0.01, 0.01);
+            p.om = random(-0.01, 0.01);
+            p.fi = random(-0.01, 0.01);
+            p.ka = random(-0.01, 0.01);
+
+            Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+            m_poses.emplace_back(m, true);
+        }
+
+        for (size_t i = 1; i < 100; i++)
+        {
+            TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
+            edge.index_from = i - 1;
+            edge.index_to = i;
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.covariance(0, 0) = 0.01;
+            edge.covariance(1, 1) = 0.02;
+            edge.covariance(2, 2) = 0.03;
+            edge.covariance(3, 3) = 0.04;
+            edge.covariance(4, 4) = 0.05;
+            edge.covariance(5, 5) = 0.06;
+
+            edge.information_matrix = edge.covariance.inverse();
+
+            edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+            edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
+            tb_edges.emplace_back(edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+            r_edge.index_from = i - 1;
+            r_edge.index_to = i;
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
+
+            r_edge.covariance =
+                TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            r_edge.information_matrix = r_edge.covariance.inverse();
+
+            r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+            r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+            rodrigues_edges.emplace_back(r_edge);
+
+            TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+            q_edge.index_from = i - 1;
+            q_edge.index_to = i;
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
+
+            q_edge.covariance =
+                TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
+                    edge.covariance,
+                    TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+
+            Eigen::MatrixXd A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
 
             q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -146,9 +526,10 @@ int main(int argc, char *argv[])
             TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
             edge.index_from = i - 1;
             edge.index_to = i;
-            edge.measurement = m_poses[edge.index_from].inverse() * m_poses[edge.index_to];
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
 
-            edge.uncertainty_covariance_information_matrix_inverse.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.information_matrix = edge.covariance.inverse();
 
             edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -163,11 +544,12 @@ int main(int argc, char *argv[])
 
             r_edge.index_from = i - 1;
             r_edge.index_to = i;
-            r_edge.measurement = m_poses[r_edge.index_from].inverse() * m_poses[r_edge.index_to];
-            r_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
+            r_edge.covariance =
                 TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
-                    edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                    edge.covariance,
                     TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            r_edge.information_matrix = r_edge.covariance.inverse();
 
             r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -182,12 +564,14 @@ int main(int argc, char *argv[])
 
             q_edge.index_from = i - 1;
             q_edge.index_to = i;
-            q_edge.measurement = m_poses[q_edge.index_from].inverse() * m_poses[q_edge.index_to];
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
 
-            q_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+            q_edge.covariance =
                 TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
-                    edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                    edge.covariance,
                     TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+            Eigen::MatrixXd A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
 
             q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -205,8 +589,9 @@ int main(int argc, char *argv[])
             TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
             edge.index_from = i;
             edge.index_to = i + 100;
-            edge.measurement = m_poses[edge.index_from].inverse() * m_poses[edge.index_to];
-            edge.uncertainty_covariance_information_matrix_inverse.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.measurement = m_poses[edge.index_from].first.inverse() * m_poses[edge.index_to].first;
+            edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+            edge.information_matrix = edge.covariance.inverse();
 
             edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -221,12 +606,13 @@ int main(int argc, char *argv[])
 
             r_edge.index_from = i;
             r_edge.index_to = i + 100;
-            r_edge.measurement = m_poses[r_edge.index_from].inverse() * m_poses[r_edge.index_to];
+            r_edge.measurement = m_poses[r_edge.index_from].first.inverse() * m_poses[r_edge.index_to].first;
 
-            r_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+            r_edge.covariance =
                 TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
-                    edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                    edge.covariance,
                     TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+            r_edge.information_matrix = r_edge.covariance.inverse();
 
             r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -241,12 +627,14 @@ int main(int argc, char *argv[])
 
             q_edge.index_from = i;
             q_edge.index_to = i + 100;
-            q_edge.measurement = m_poses[q_edge.index_from].inverse() * m_poses[q_edge.index_to];
+            q_edge.measurement = m_poses[q_edge.index_from].first.inverse() * m_poses[q_edge.index_to].first;
 
-            q_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+            q_edge.covariance =
                 TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
-                    edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                    edge.covariance,
                     TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+            Eigen::MatrixXd A = q_edge.covariance;
+            q_edge.information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
 
             q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
             q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -258,7 +646,128 @@ int main(int argc, char *argv[])
 
             quaternion_edges.emplace_back(q_edge);
         }
+        #endif
     }else{
+
+        #if 0
+
+        std::ifstream g2o_file(argv[1]);
+
+        std::string line;
+        while (std::getline(g2o_file, line))
+        {
+            std::stringstream line_stream(line);
+            std::string class_element;
+            line_stream >> class_element;
+            if (class_element == "VERTEX_SE2")
+            {
+                int id = 0;
+                TinyVersatilePoseGraphSLAM::TaitBryanPose p;
+                line_stream >> id;
+                line_stream >> p.px;
+                line_stream >> p.py;
+                line_stream >> p.ka;
+
+                Eigen::Affine3d m = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+                m_poses.push_back(m);
+            }
+            else if (class_element == "EDGE_SE2")
+            {
+                int pose_id1, pose_id2;
+                line_stream >> pose_id1;
+                line_stream >> pose_id2;
+                TinyVersatilePoseGraphSLAM::TaitBryanPose p;
+                line_stream >> p.px;
+                line_stream >> p.py;
+                line_stream >> p.ka;
+
+                p.py = 0.0;
+                p.om = 0.0;
+                p.fi = 0.0;
+
+                Eigen::Affine3d measurement = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(p);
+
+                //edges_g2o.emplace_back(std::make_tuple(pose_id1, pose_id2, m));
+
+                std::vector<double> w(6);
+                for (size_t i = 0; i < 6; i++)
+                {
+                    line_stream >> w[i];
+                }
+                //std::vector<double> ww(3);
+                //ww[0] = w[0];
+                //ww[1] = w[3];
+                //ww[2] = w[5];
+                //edges_g2o_w.push_back(ww);
+
+                ////////////////////////////////////////////////////////
+                TinyVersatilePoseGraphSLAM::EdgeTaitBryan edge;
+                edge.index_from = pose_id1;
+                edge.index_to = pose_id2;
+                edge.measurement = measurement;
+                edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+                edge.covariance(0, 0) = 1.0 / sqrt(w[0]);
+                edge.covariance(1, 1) = 1.0 / sqrt(w[1]);
+                edge.covariance(2, 2) = 1.0 / sqrt(w[2]);
+                edge.covariance(3, 3) = 1.0 / sqrt(w[3]);
+                edge.covariance(4, 4) = 1.0 / sqrt(w[4]);
+                edge.covariance(5, 5) = 1.0 / sqrt(w[5]);
+
+                edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+                edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+                edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+                edge.robust_kernel_W.om_robust_kernel_W = 1.0; // no robust kernel function
+                edge.robust_kernel_W.fi_robust_kernel_W = 1.0; // no robust kernel function
+                edge.robust_kernel_W.ka_robust_kernel_W = 1.0; // no robust kernel function
+
+                tb_edges.emplace_back(edge);
+
+                TinyVersatilePoseGraphSLAM::EdgeRodrigues r_edge;
+
+                r_edge.index_from = pose_id1;
+                r_edge.index_to = pose_id2;
+                r_edge.measurement = measurement;
+
+                r_edge.covariance =
+                    TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
+                        edge.covariance,
+                        TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+
+                r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+                r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+                r_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+                r_edge.robust_kernel_W.sx_robust_kernel_W = 1.0; // no robust kernel function
+                r_edge.robust_kernel_W.sy_robust_kernel_W = 1.0; // no robust kernel function
+                r_edge.robust_kernel_W.sz_robust_kernel_W = 1.0; // no robust kernel function
+
+                rodrigues_edges.emplace_back(r_edge);
+
+                TinyVersatilePoseGraphSLAM::EdgeQuaternion q_edge;
+
+                q_edge.index_from = pose_id1;
+                q_edge.index_to = pose_id2;
+                q_edge.measurement = measurement;
+
+                q_edge.covariance =
+                    TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
+                        edge.covariance,
+                        TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
+
+                q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
+                q_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
+                q_edge.robust_kernel_W.pz_robust_kernel_W = 1.0; // no robust kernel function
+                q_edge.robust_kernel_W.q0_robust_kernel_W = 1.0; // no robust kernel function
+                q_edge.robust_kernel_W.q1_robust_kernel_W = 1.0; // no robust kernel function
+                q_edge.robust_kernel_W.q2_robust_kernel_W = 1.0; // no robust kernel function
+                q_edge.robust_kernel_W.q3_robust_kernel_W = 1.0; // no robust kernel function
+
+                quaternion_edges.emplace_back(q_edge);
+            }
+        }
+        g2o_file.close();
+
+        #endif
+#if 0
         std::ifstream g2o_file(argv[1]);
 
         std::string line;
@@ -301,8 +810,6 @@ int main(int argc, char *argv[])
 
                 //edges_g2o.emplace_back(std::make_tuple(pose_id1, pose_id2, m));
 
-
-
                 std::vector<double> w(21);
                 for (size_t i = 0; i < 21; i++)
                 {
@@ -322,13 +829,14 @@ int main(int argc, char *argv[])
                 edge.index_from = pose_id1;
                 edge.index_to = pose_id2;
                 edge.measurement = measurement;
-                edge.uncertainty_covariance_information_matrix_inverse.covariance = Eigen::Matrix<double, 6, 6>::Identity();
-                edge.uncertainty_covariance_information_matrix_inverse.covariance(0, 0) = 1.0 / sqrt(ww[0]);
-                edge.uncertainty_covariance_information_matrix_inverse.covariance(1, 1) = 1.0 / sqrt(ww[1]);
-                edge.uncertainty_covariance_information_matrix_inverse.covariance(2, 2) = 1.0 / sqrt(ww[2]);
-                edge.uncertainty_covariance_information_matrix_inverse.covariance(3, 3) = 1.0 / sqrt(ww[3]);
-                edge.uncertainty_covariance_information_matrix_inverse.covariance(4, 4) = 1.0 / sqrt(ww[4]);
-                edge.uncertainty_covariance_information_matrix_inverse.covariance(5, 5) = 1.0 / sqrt(ww[5]);
+                edge.covariance = Eigen::Matrix<double, 6, 6>::Identity();
+                edge.covariance(0, 0) = 1.0 / sqrt(ww[0]);
+                edge.covariance(1, 1) = 1.0 / sqrt(ww[1]);
+                edge.covariance(2, 2) = 1.0 / sqrt(ww[2]);
+                edge.covariance(3, 3) = 1.0 / sqrt(ww[3]);
+                edge.covariance(4, 4) = 1.0 / sqrt(ww[4]);
+                edge.covariance(5, 5) = 1.0 / sqrt(ww[5]);
+                edge.information_matrix = edge.covariance.inverse();
 
                 edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
                 edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -345,10 +853,12 @@ int main(int argc, char *argv[])
                 r_edge.index_to = pose_id2;
                 r_edge.measurement = measurement;
 
-                r_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+                r_edge.covariance =
                     TinyVersatilePoseGraphSLAM::rodrigues_covariance_from_tait_bryan_covariance(
-                        edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                        edge.covariance,
                         TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(r_edge.measurement));
+
+                r_edge.information_matrix = r_edge.covariance.inverse();
 
                 r_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
                 r_edge.robust_kernel_W.py_robust_kernel_W = 1.0; // no robust kernel function
@@ -365,9 +875,9 @@ int main(int argc, char *argv[])
                 q_edge.index_to = pose_id2;
                 q_edge.measurement = measurement;
 
-                q_edge.uncertainty_covariance_information_matrix_inverse.covariance =
+                q_edge.covariance =
                     TinyVersatilePoseGraphSLAM::quaternion_covariance_from_tait_bryan_covariance(
-                        edge.uncertainty_covariance_information_matrix_inverse.covariance,
+                        edge.covariance,
                         TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(q_edge.measurement));
 
                 q_edge.robust_kernel_W.px_robust_kernel_W = 1.0; // no robust kernel function
@@ -382,6 +892,8 @@ int main(int argc, char *argv[])
             }
         }
         g2o_file.close();
+
+        #endif
     }
 
     if (false == initGL(&argc, argv))
@@ -451,8 +963,8 @@ void display()
     glBegin(GL_LINES);
     for (size_t i = 0; i < tb_edges.size(); i++)
     {
-        glVertex3f(m_poses[tb_edges[i].index_from](0, 3), m_poses[tb_edges[i].index_from](1, 3), m_poses[tb_edges[i].index_from](2, 3));
-        glVertex3f(m_poses[tb_edges[i].index_to](0, 3), m_poses[tb_edges[i].index_to](1, 3), m_poses[tb_edges[i].index_to](2, 3));
+        glVertex3f(m_poses[tb_edges[i].index_from].first(0, 3), m_poses[tb_edges[i].index_from].first(1, 3), m_poses[tb_edges[i].index_from].first(2, 3));
+        glVertex3f(m_poses[tb_edges[i].index_to].first(0, 3), m_poses[tb_edges[i].index_to].first(1, 3), m_poses[tb_edges[i].index_to].first(2, 3));
     }
     glEnd();
 
@@ -472,25 +984,42 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     {
         for (size_t i = 0; i < m_poses.size(); i++)
         {
-            TinyVersatilePoseGraphSLAM::TaitBryanPose tb_pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[i]);
+            TinyVersatilePoseGraphSLAM::TaitBryanPose tb_pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[i].first);
             tb_pose.px += random(-0.1, 0.1);
             tb_pose.py += random(-0.1, 0.1);
             tb_pose.pz += random(-0.1, 0.1);
             tb_pose.om += random(-0.01, 0.01);
             tb_pose.fi += random(-0.01, 0.01);
             tb_pose.ka += random(-0.01, 0.01);
-            m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(tb_pose);
+            if (m_poses[i].second){
+                m_poses[i].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(tb_pose);
+            }
         }
-        break;
         break;
     }
     case 't':
     {
         std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan_wc(m_poses, tb_edges);
 
-        for (int row = 0; row < 6; row++)
+        /*for (int row = 0; row < 6; row++)
         {
             AtPA_AtPB.first.coeffRef(row, row) += 1;
+        }*/
+
+        //priors
+        for (int row = 100 * 6; row < 100 * 6 + 6; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
+        }
+
+        for (int row = 101 * 6; row < 101 * 6 + 6; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
+        }
+
+        for (int row = 102 * 6; row < 102 * 6 + 6; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
         }
 
         std::cout << "start solving AtPA=AtPB" << std::endl;
@@ -509,9 +1038,24 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     {
         std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_rodrigues_wc(m_poses, rodrigues_edges);
 
-        for (int row = 0; row < 6; row++)
+        // for (int row = 0; row < 6; row++)
+        //{
+        //     AtPA_AtPB.first.coeffRef(row, row) += 1;
+        // }
+        // priors
+        for (int row = 100 * 6; row < 100 * 6 + 6; row++)
         {
-            AtPA_AtPB.first.coeffRef(row, row) += 1;
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
+        }
+
+        for (int row = 101 * 6; row < 101 * 6 + 6; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
+        }
+
+        for (int row = 102 * 6; row < 102 * 6 + 6; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
         }
 
         std::cout << "start solving AtPA=AtPB" << std::endl;
@@ -530,9 +1074,25 @@ void keyboard(unsigned char key, int /*x*/, int /*y*/)
     {
         std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> AtPA_AtPB = TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_quaternion_wc(m_poses, quaternion_edges);
 
-        for (int row = 0; row < 7; row++)
+        //for (int row = 0; row < 7; row++)
+        //{
+        //    AtPA_AtPB.first.coeffRef(row, row) += 1;
+        //}
+
+        // priors
+        for (int row = 100 * 7; row < 100 * 7 + 7; row++)
         {
-            AtPA_AtPB.first.coeffRef(row, row) += 1;
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
+        }
+
+        for (int row = 101 * 7; row < 101 * 7 + 7; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
+        }
+
+        for (int row = 102 * 7; row < 102 * 7 + 7; row++)
+        {
+            AtPA_AtPB.first.coeffRef(row, row) += 1000000;
         }
 
         std::cout << "start solving AtPA=AtPB" << std::endl;

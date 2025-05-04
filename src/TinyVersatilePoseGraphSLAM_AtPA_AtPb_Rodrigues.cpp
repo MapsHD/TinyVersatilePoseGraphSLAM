@@ -1,6 +1,6 @@
 #include <TinyVersatilePoseGraphSLAM.h>
 
-std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_rodrigues_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeRodrigues> &rodrigues_edges){
+std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_rodrigues_wc(const std::vector<std::pair<Eigen::Affine3d, bool>> &m_poses, const std::vector<EdgeRodrigues> &rodrigues_edges){
     std::vector<Eigen::Triplet<double>> tripletListA;
     std::vector<Eigen::Triplet<double>> tripletListP;
     std::vector<Eigen::Triplet<double>> tripletListB;
@@ -9,7 +9,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
   
     for (size_t i = 0; i < m_poses.size(); i++)
     {
-        poses.push_back(pose_rodrigues_from_affine_matrix(m_poses[i]));
+        poses.push_back(pose_rodrigues_from_affine_matrix(m_poses[i].first));
     }
    
     for(int i = 0; i < rodrigues_edges.size(); i++)
@@ -20,7 +20,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         double wy = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.py_1_sigma_m);
         double wz = 1.0 / (e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m * e.uncertainty_covariance_information_matrix_inverse.pz_1_sigma_m);*/
 
-        Eigen::Matrix<double, 6, 6> information_matrix = e.uncertainty_covariance_information_matrix_inverse.covariance.inverse();
+        //Eigen::Matrix<double, 6, 6> information_matrix = e.uncertainty_covariance_information_matrix_inverse.covariance.inverse();
 
         //Eigen::Matrix3d inf_m = e.uncertainty_covariance_information_matrix_inverse.cov.inverse();
         //Eigen::Matrix3d cov;
@@ -100,21 +100,21 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
             tripletListB.emplace_back(ir + 4, 0, delta(4, 0));
             tripletListB.emplace_back(ir + 5, 0, delta(5, 0));
 
-            tripletListP.emplace_back(ir, ir, information_matrix(0,0) * e.robust_kernel_W.px_robust_kernel_W);
-            tripletListP.emplace_back(ir + 1, ir + 1, information_matrix(1,1) * e.robust_kernel_W.py_robust_kernel_W);
-            tripletListP.emplace_back(ir + 2, ir + 2, information_matrix(2,2) * e.robust_kernel_W.pz_robust_kernel_W);
+            tripletListP.emplace_back(ir, ir,         e.information_matrix(0,0) * e.robust_kernel_W.px_robust_kernel_W);
+            tripletListP.emplace_back(ir + 1, ir + 1, e.information_matrix(1,1) * e.robust_kernel_W.py_robust_kernel_W);
+            tripletListP.emplace_back(ir + 2, ir + 2, e.information_matrix(2,2) * e.robust_kernel_W.pz_robust_kernel_W);
             
-            tripletListP.emplace_back(ir + 3, ir + 3, information_matrix(3,3) * e.robust_kernel_W.sx_robust_kernel_W);
-            tripletListP.emplace_back(ir + 3, ir + 4, information_matrix(3,4) * e.robust_kernel_W.sx_robust_kernel_W);
-            tripletListP.emplace_back(ir + 3, ir + 5, information_matrix(3,5) * e.robust_kernel_W.sx_robust_kernel_W);
+            tripletListP.emplace_back(ir + 3, ir + 3, e.information_matrix(3,3) * e.robust_kernel_W.sx_robust_kernel_W);
+            tripletListP.emplace_back(ir + 3, ir + 4, e.information_matrix(3,4) * e.robust_kernel_W.sx_robust_kernel_W);
+            tripletListP.emplace_back(ir + 3, ir + 5, e.information_matrix(3,5) * e.robust_kernel_W.sx_robust_kernel_W);
 
-            tripletListP.emplace_back(ir + 4, ir + 3, information_matrix(4,3) * e.robust_kernel_W.sy_robust_kernel_W);
-            tripletListP.emplace_back(ir + 4, ir + 4, information_matrix(4,4) * e.robust_kernel_W.sy_robust_kernel_W);
-            tripletListP.emplace_back(ir + 4, ir + 5, information_matrix(4,5) * e.robust_kernel_W.sy_robust_kernel_W);
+            tripletListP.emplace_back(ir + 4, ir + 3, e.information_matrix(4,3) * e.robust_kernel_W.sy_robust_kernel_W);
+            tripletListP.emplace_back(ir + 4, ir + 4, e.information_matrix(4,4) * e.robust_kernel_W.sy_robust_kernel_W);
+            tripletListP.emplace_back(ir + 4, ir + 5, e.information_matrix(4,5) * e.robust_kernel_W.sy_robust_kernel_W);
 
-            tripletListP.emplace_back(ir + 5, ir + 3, information_matrix(5,3) * e.robust_kernel_W.sz_robust_kernel_W);
-            tripletListP.emplace_back(ir + 5, ir + 4, information_matrix(5,4) * e.robust_kernel_W.sz_robust_kernel_W);
-            tripletListP.emplace_back(ir + 5, ir + 5, information_matrix(5,5) * e.robust_kernel_W.sz_robust_kernel_W);
+            tripletListP.emplace_back(ir + 5, ir + 3, e.information_matrix(5,3) * e.robust_kernel_W.sz_robust_kernel_W);
+            tripletListP.emplace_back(ir + 5, ir + 4, e.information_matrix(5,4) * e.robust_kernel_W.sz_robust_kernel_W);
+            tripletListP.emplace_back(ir + 5, ir + 5, e.information_matrix(5,5) * e.robust_kernel_W.sz_robust_kernel_W);
         }
         Eigen::SparseMatrix<double> matA(tripletListB.size(), m_poses.size() * 6);
         Eigen::SparseMatrix<double> matP(tripletListB.size(), tripletListB.size());
@@ -136,7 +136,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         return {AtPA, AtPB};
 }
 
-double TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
+double TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(const Eigen::SparseMatrix<double> &x, std::vector<std::pair<Eigen::Affine3d, bool>> &m_poses)
 {
     double result = 0.0;
     std::vector<double> h_x;
@@ -157,7 +157,7 @@ double TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(const Eigen::Sparse
 
         for (size_t i = 0; i < m_poses.size(); i++)
         {
-            TinyVersatilePoseGraphSLAM::RodriguesPose pose = TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(m_poses[i]);
+            TinyVersatilePoseGraphSLAM::RodriguesPose pose = TinyVersatilePoseGraphSLAM::pose_rodrigues_from_affine_matrix(m_poses[i].first);
             double px_update = h_x[counter++];
             double py_update = h_x[counter++];
             double pz_update = h_x[counter++];
@@ -171,7 +171,10 @@ double TinyVersatilePoseGraphSLAM::apply_result_rodrigues_wc(const Eigen::Sparse
             pose.sx += sx_update;
             pose.sy += sy_update;
             pose.sz += sz_update;
-            m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_rodrigues(pose);
+
+            if(m_poses[i].second){
+                m_poses[i].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_rodrigues(pose);
+            }
 
             sum_sq += px_update * px_update;
             sum_sq += py_update * py_update;

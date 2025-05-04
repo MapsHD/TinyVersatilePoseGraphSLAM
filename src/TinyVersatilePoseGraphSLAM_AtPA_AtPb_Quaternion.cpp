@@ -1,7 +1,7 @@
 #include <TinyVersatilePoseGraphSLAM.h>
 #include <iostream>
 
-std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_quaternion_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeQuaternion> &edges)
+std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_quaternion_wc(const std::vector<std::pair<Eigen::Affine3d, bool>> &m_poses, const std::vector<EdgeQuaternion> &edges)
 {
     std::vector<Eigen::Triplet<double>> tripletListA;
     std::vector<Eigen::Triplet<double>> tripletListP;
@@ -11,7 +11,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
 
     for (size_t i = 0; i < m_poses.size(); i++)
     {
-        poses.push_back(pose_quaternion_from_affine_matrix(m_poses[i]));
+        poses.push_back(pose_quaternion_from_affine_matrix(m_poses[i].first));
     }
 
     for (int i = 0; i < edges.size(); i++)
@@ -19,8 +19,8 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         const auto &e = edges[i];
         QuaternionPose measurement = pose_quaternion_from_affine_matrix(e.measurement);
        
-        Eigen::MatrixXd A = e.uncertainty_covariance_information_matrix_inverse.covariance;
-        Eigen::MatrixXd information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
+        //Eigen::MatrixXd A = e.covariance;
+        //Eigen::MatrixXd information_matrix = A.completeOrthogonalDecomposition().pseudoInverse();
 
         Eigen::Matrix<double, 7, 1> delta;
         relative_pose_obs_eq_quaternion_wc(
@@ -96,41 +96,39 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
         tripletListB.emplace_back(ir + 5, 0, delta(5, 0));
         tripletListB.emplace_back(ir + 6, 0, delta(6, 0));
 
-        tripletListP.emplace_back(ir, ir, information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W);
-        tripletListP.emplace_back(ir + 1, ir + 1, information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W);
-        tripletListP.emplace_back(ir + 2, ir + 2, information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W);
+        tripletListP.emplace_back(ir, ir, e.information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W);
+        tripletListP.emplace_back(ir + 1, ir + 1, e.information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W);
+        tripletListP.emplace_back(ir + 2, ir + 2, e.information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W);
 
 
-        tripletListP.emplace_back(ir + 3, ir + 3, information_matrix(3, 3) * e.robust_kernel_W.q0_robust_kernel_W);
-        tripletListP.emplace_back(ir + 3, ir + 4, information_matrix(3, 4) * e.robust_kernel_W.q0_robust_kernel_W);
-        tripletListP.emplace_back(ir + 3, ir + 5, information_matrix(3, 5) * e.robust_kernel_W.q0_robust_kernel_W);
-        tripletListP.emplace_back(ir + 3, ir + 6, information_matrix(3, 6) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 3, e.information_matrix(3, 3) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 4, e.information_matrix(3, 4) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 5, e.information_matrix(3, 5) * e.robust_kernel_W.q0_robust_kernel_W);
+        tripletListP.emplace_back(ir + 3, ir + 6, e.information_matrix(3, 6) * e.robust_kernel_W.q0_robust_kernel_W);
 
 
-        tripletListP.emplace_back(ir + 4, ir + 3, information_matrix(4, 3) * e.robust_kernel_W.q1_robust_kernel_W);
-        tripletListP.emplace_back(ir + 4, ir + 4, information_matrix(4, 4) * e.robust_kernel_W.q1_robust_kernel_W);
-        tripletListP.emplace_back(ir + 4, ir + 5, information_matrix(4, 5) * e.robust_kernel_W.q1_robust_kernel_W);
-        tripletListP.emplace_back(ir + 4, ir + 6, information_matrix(4, 6) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 3, e.information_matrix(4, 3) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 4, e.information_matrix(4, 4) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 5, e.information_matrix(4, 5) * e.robust_kernel_W.q1_robust_kernel_W);
+        tripletListP.emplace_back(ir + 4, ir + 6, e.information_matrix(4, 6) * e.robust_kernel_W.q1_robust_kernel_W);
 
 
-        tripletListP.emplace_back(ir + 5, ir + 3, information_matrix(5, 3) * e.robust_kernel_W.q2_robust_kernel_W);
-        tripletListP.emplace_back(ir + 5, ir + 4, information_matrix(5, 4) * e.robust_kernel_W.q2_robust_kernel_W);
-        tripletListP.emplace_back(ir + 5, ir + 5, information_matrix(5, 5) * e.robust_kernel_W.q2_robust_kernel_W);
-        tripletListP.emplace_back(ir + 5, ir + 6, information_matrix(5, 6) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 3, e.information_matrix(5, 3) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 4, e.information_matrix(5, 4) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 5, e.information_matrix(5, 5) * e.robust_kernel_W.q2_robust_kernel_W);
+        tripletListP.emplace_back(ir + 5, ir + 6, e.information_matrix(5, 6) * e.robust_kernel_W.q2_robust_kernel_W);
 
-        tripletListP.emplace_back(ir + 6, ir + 3, information_matrix(6, 3) * e.robust_kernel_W.q3_robust_kernel_W);
-        tripletListP.emplace_back(ir + 6, ir + 4, information_matrix(6, 4) * e.robust_kernel_W.q3_robust_kernel_W);
-        tripletListP.emplace_back(ir + 6, ir + 5, information_matrix(6, 5) * e.robust_kernel_W.q3_robust_kernel_W);
-        tripletListP.emplace_back(ir + 6, ir + 6, information_matrix(6, 6) * e.robust_kernel_W.q3_robust_kernel_W);
-
-
+        tripletListP.emplace_back(ir + 6, ir + 3, e.information_matrix(6, 3) * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir + 6, ir + 4, e.information_matrix(6, 4) * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir + 6, ir + 5, e.information_matrix(6, 5) * e.robust_kernel_W.q3_robust_kernel_W);
+        tripletListP.emplace_back(ir + 6, ir + 6, e.information_matrix(6, 6) * e.robust_kernel_W.q3_robust_kernel_W);
     }
 
     for (size_t i = 0; i < m_poses.size(); i++)
     {
         int ic = i * 7;
         int ir = tripletListB.size();
-        QuaternionPose pose = pose_quaternion_from_affine_matrix(m_poses[i]);
+        QuaternionPose pose = pose_quaternion_from_affine_matrix(m_poses[i].first);
 
         double delta;
         quaternion_constraint(delta, pose.q0, pose.q1, pose.q2, pose.q3);
@@ -168,7 +166,7 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
     return {AtPA, AtPB};
 }
 
-double TinyVersatilePoseGraphSLAM::apply_result_quaternion_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
+double TinyVersatilePoseGraphSLAM::apply_result_quaternion_wc(const Eigen::SparseMatrix<double> &x, std::vector<std::pair<Eigen::Affine3d, bool>> &m_poses)
 {
     double result = 0.0;
     std::vector<double> h_x;
@@ -189,7 +187,7 @@ double TinyVersatilePoseGraphSLAM::apply_result_quaternion_wc(const Eigen::Spars
 
         for (size_t i = 0; i < m_poses.size(); i++)
         {
-            TinyVersatilePoseGraphSLAM::QuaternionPose pose = TinyVersatilePoseGraphSLAM::pose_quaternion_from_affine_matrix(m_poses[i]);
+            TinyVersatilePoseGraphSLAM::QuaternionPose pose = TinyVersatilePoseGraphSLAM::pose_quaternion_from_affine_matrix(m_poses[i].first);
             double px_update = h_x[counter++];
             double py_update = h_x[counter++];
             double pz_update = h_x[counter++];
@@ -205,7 +203,9 @@ double TinyVersatilePoseGraphSLAM::apply_result_quaternion_wc(const Eigen::Spars
             pose.q1 += q1_update;
             pose.q2 += q2_update;
             pose.q3 += q3_update;
-            m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_quaternion(pose);
+            if(m_poses[i].second){
+                m_poses[i].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_quaternion(pose);
+            }
 
             sum_sq += px_update * px_update;
             sum_sq += py_update * py_update;

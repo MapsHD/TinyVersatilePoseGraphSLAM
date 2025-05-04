@@ -1,29 +1,22 @@
 #include <TinyVersatilePoseGraphSLAM.h>
 //#include <iostream>
 
-std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan_wc(const std::vector<Eigen::Affine3d> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
+std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatilePoseGraphSLAM::get_AtPA_AtPB_pose_graph_tait_byan_wc(const std::vector<std::pair<Eigen::Affine3d, bool>> &m_poses, const std::vector<EdgeTaitBryan> &tb_edges)
 {
     std::vector<TaitBryanPose> tb_poses;
     for (const auto &m : m_poses)
     {
-        tb_poses.emplace_back(pose_tait_bryan_from_affine_matrix(m));
+        tb_poses.emplace_back(pose_tait_bryan_from_affine_matrix(m.first));
     }
 
     Eigen::SparseMatrix<double> AtPA_out(m_poses.size() * 6, m_poses.size() * 6);
     Eigen::SparseMatrix<double> AtPB_out(m_poses.size() * 6, 1);
 
-    //int counter = 0;
-
     for (const auto &e : tb_edges)
     {
-        //std::cout << "calculated: " << counter << " of " << tb_edges.size() << std::endl;
-        //counter++;
         TaitBryanPose tb_measurement = pose_tait_bryan_from_affine_matrix(e.measurement);
         
-        Eigen::Matrix<double, 6, 6> information_matrix = e.uncertainty_covariance_information_matrix_inverse.covariance.inverse();
-
-        Eigen::Matrix<double, 12, 12>
-            AtPA;
+        Eigen::Matrix<double, 12, 12> AtPA;
         relative_pose_obs_eq_tait_bryan_wc_case1_AtPA_simplified(AtPA,
                                                                  tb_poses[e.index_from].px,
                                                                  tb_poses[e.index_from].py,
@@ -37,12 +30,12 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
                                                                  tb_poses[e.index_to].om,
                                                                  tb_poses[e.index_to].fi,
                                                                  tb_poses[e.index_to].ka,
-                                                                 information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W,
-                                                                 information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W,
-                                                                 information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W,
-                                                                 information_matrix(3, 3) * e.robust_kernel_W.om_robust_kernel_W,
-                                                                 information_matrix(4, 4) * e.robust_kernel_W.fi_robust_kernel_W,
-                                                                 information_matrix(5, 5) * e.robust_kernel_W.ka_robust_kernel_W);
+                                                                 e.information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W,
+                                                                 e.information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W,
+                                                                 e.information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W,
+                                                                 e.information_matrix(3, 3) * e.robust_kernel_W.om_robust_kernel_W,
+                                                                 e.information_matrix(4, 4) * e.robust_kernel_W.fi_robust_kernel_W,
+                                                                 e.information_matrix(5, 5) * e.robust_kernel_W.ka_robust_kernel_W);
         Eigen::Matrix<double, 12, 1> AtPB;
         relative_pose_obs_eq_tait_bryan_wc_case1_AtPB_simplified(AtPB,
                                                                  tb_poses[e.index_from].px,
@@ -63,12 +56,12 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
                                                                  tb_measurement.om,
                                                                  tb_measurement.fi,
                                                                  tb_measurement.ka,
-                                                                 information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W,
-                                                                 information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W,
-                                                                 information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W,
-                                                                 information_matrix(3, 3) * e.robust_kernel_W.om_robust_kernel_W,
-                                                                 information_matrix(4, 4) * e.robust_kernel_W.fi_robust_kernel_W,
-                                                                 information_matrix(5, 5) * e.robust_kernel_W.ka_robust_kernel_W);
+                                                                 e.information_matrix(0, 0) * e.robust_kernel_W.px_robust_kernel_W,
+                                                                 e.information_matrix(1, 1) * e.robust_kernel_W.py_robust_kernel_W,
+                                                                 e.information_matrix(2, 2) * e.robust_kernel_W.pz_robust_kernel_W,
+                                                                 e.information_matrix(3, 3) * e.robust_kernel_W.om_robust_kernel_W,
+                                                                 e.information_matrix(4, 4) * e.robust_kernel_W.fi_robust_kernel_W,
+                                                                 e.information_matrix(5, 5) * e.robust_kernel_W.ka_robust_kernel_W);
         int ic_1 = e.index_from * 6;
         int ic_2 = e.index_to * 6;
 
@@ -89,11 +82,10 @@ std::pair<Eigen::SparseMatrix<double>, Eigen::SparseMatrix<double>> TinyVersatil
             AtPB_out.coeffRef(ic_2 + row, 0) -= AtPB(row + 6, 0);
         }
     }
-
     return {AtPA_out, AtPB_out};
 }
 
-double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::SparseMatrix<double> &x, std::vector<Eigen::Affine3d> &m_poses)
+double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::SparseMatrix<double> &x, std::vector<std::pair<Eigen::Affine3d, bool>> &m_poses)
 {
     double result = 0.0;
     std::vector<double> h_x;
@@ -114,7 +106,7 @@ double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::Spars
 
         for (size_t i = 0; i < m_poses.size(); i++)
         {
-            TinyVersatilePoseGraphSLAM::TaitBryanPose pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[i]);
+            TinyVersatilePoseGraphSLAM::TaitBryanPose pose = TinyVersatilePoseGraphSLAM::pose_tait_bryan_from_affine_matrix(m_poses[i].first);
             double px_update = h_x[counter++];
             double py_update = h_x[counter++];
             double pz_update = h_x[counter++];
@@ -128,7 +120,9 @@ double TinyVersatilePoseGraphSLAM::apply_result_tait_bryan_wc(const Eigen::Spars
             pose.om += om_update;
             pose.fi += fi_update;
             pose.ka += ka_update;
-            m_poses[i] = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(pose);
+            if (m_poses[i].second){
+                m_poses[i].first = TinyVersatilePoseGraphSLAM::affine_matrix_from_pose_tait_bryan(pose);
+            }
 
             sum_sq += px_update * px_update;
             sum_sq += py_update * py_update;
